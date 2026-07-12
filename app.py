@@ -58,7 +58,15 @@ load_dotenv()
 
 app = Flask(__name__, static_folder="public", static_url_path="")
 
-EXCEL_PATH = os.path.join(os.path.dirname(__file__), "applications.xlsx")
+# DATA_DIR lets this point at a persistent disk on Render (or anywhere
+# else). Locally, it just defaults to this folder, same as before.
+# On Render: set an environment variable DATA_DIR to your disk's mount
+# path (e.g. /opt/render/project/src/data) so applications.xlsx
+# survives restarts and redeploys instead of living in the app's
+# regular (non-persistent) folder.
+DATA_DIR = os.getenv("DATA_DIR", os.path.dirname(__file__))
+os.makedirs(DATA_DIR, exist_ok=True)
+EXCEL_PATH = os.path.join(DATA_DIR, "applications.xlsx")
 write_lock = threading.Lock()  # prevents two submissions corrupting the file if they land at the same instant
 
 ACCESS_CODE = os.getenv("ADMIN_ACCESS_CODE", "changeme123")
@@ -118,13 +126,20 @@ def send_email(to_addr, subject, body):
     msg["Subject"] = subject
     msg.attach(MIMEText(body, "plain"))
     try:
-        with smtplib.SMTP(MAIL_SERVER, MAIL_PORT) as server:
+        with smtplib.SMTP(MAIL_SERVER, MAIL_PORT, timeout=10) as server:
             if MAIL_USE_TLS:
                 server.starttls()
             server.login(MAIL_USERNAME, MAIL_PASSWORD)
             server.sendmail(MAIL_USERNAME, to_addr, msg.as_string())
     except Exception as e:
         print(f"[email] failed to send to {to_addr}: {e}")
+
+
+def send_email_async(to_addr, subject, body):
+    """Fires the email off in the background so a slow or blocked SMTP
+    server can never delay — or crash — the parent's registration
+    response. The application is already saved by the time this runs."""
+    threading.Thread(target=send_email, args=(to_addr, subject, body), daemon=True).start()
 
 
 # ---------------------------------------------------------------
@@ -185,9 +200,9 @@ def register():
         f"required at any step.\n\n— Vulani"
     )
     if row["Parent Email"]:
-        send_email(row["Parent Email"], f"Vulani application received — {ref}", body)
+        send_email_async(row["Parent Email"], f"Vulani application received — {ref}", body)
     if ALERT_EMAIL:
-        send_email(ALERT_EMAIL, f"New application: {row['Child Name']} — {ref}",
+        send_email_async(ALERT_EMAIL, f"New application: {row['Child Name']} — {ref}",
                     body + f"\n\nParent phone: {row['Parent Phone']}")
 
     return jsonify({"ok": True, "ref": ref, "submitted": submitted})
