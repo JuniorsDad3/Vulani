@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vulani — Back Office</title>
+<style>
+  :root{
+    --bg:#F5F7F4; --ink:#142B22; --ink-soft:#3E5148;
+    --green:#0F6B44; --green-dark:#0B4E32; --gold:#D9A441;
+    --danger:#B23A34; --card:#FFFFFF; --line:#DDE3DD; --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    line-height:1.5;
+  }
+  .wrap{max-width:960px;margin:0 auto;padding:24px 18px 60px;}
+  h1{font-family:'Space Grotesk',system-ui,sans-serif;font-size:1.4rem;margin:0 0 4px;}
+  .sub{color:var(--ink-soft);font-size:.88rem;margin:0 0 20px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:18px;}
+  .banner{background:#FCEFE2;border:1px solid #F0D3AE;color:#8A5A16;border-radius:10px;padding:12px 14px;font-size:.83rem;margin-bottom:18px;}
+  .banner.ok{background:#EAF3EE;border-color:#C7E0D2;color:var(--green-dark);}
+  input{padding:11px 12px;border:1.5px solid var(--line);border-radius:9px;font-size:.95rem;width:100%;font-family:inherit;}
+  .btn{
+    background:var(--green);color:#fff;border:none;border-radius:9px;padding:12px 18px;
+    font-size:.92rem;font-weight:600;cursor:pointer;font-family:inherit;
+  }
+  .btn:hover{background:var(--green-dark);}
+  .btn:disabled{background:var(--line);color:var(--ink-soft);cursor:not-allowed;}
+  .btn-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+  table{width:100%;border-collapse:collapse;font-size:.82rem;}
+  th,td{text-align:left;padding:8px 7px;border-bottom:1px solid var(--line);white-space:nowrap;}
+  th{color:var(--ink-soft);font-weight:600;font-size:.7rem;text-transform:uppercase;}
+  .table-scroll{overflow-x:auto;}
+  .mono{font-family:'IBM Plex Mono',ui-monospace,monospace;}
+  .empty-state{text-align:center;padding:36px 16px;color:var(--ink-soft);}
+  .stat{display:inline-block;background:#EAF3EE;color:var(--green-dark);border-radius:20px;padding:4px 12px;font-size:.8rem;font-weight:600;margin-right:8px;}
+  #gate{max-width:400px;margin:80px auto;}
+  #gateError{color:var(--danger);display:none;}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     ACCESS GATE
+     ============================================================
+     The code you type here is checked by app.py on the server
+     (against ADMIN_ACCESS_CODE in your .env file) — not stored in
+     this page at all, which is a real improvement over a
+     front-end-only lock. It's still a single shared password
+     rather than individual staff logins, which is fine for a
+     small pilot team but worth upgrading (e.g. Flask-Login with
+     per-person accounts) before a bigger team uses this.
+     ============================================================ -->
+<div id="gate" class="card">
+  <h1>Back office access</h1>
+  <p class="sub">Staff only — this is where applications get exported for the Department upload.</p>
+  <input type="password" id="accessCode" placeholder="Access code" onkeydown="if(event.key==='Enter') checkAccess()">
+  <div class="btn-row">
+    <button class="btn" onclick="checkAccess()">Enter</button>
+  </div>
+  <p class="sub" id="gateError">Incorrect code, or the server isn't running.</p>
+</div>
+
+<div class="wrap" id="mainApp" style="display:none;">
+  <h1>Applications — back office</h1>
+  <p class="sub">Every application submitted through the parent app lands directly in applications.xlsx on the server. Export it below whenever you're ready to prepare a batch for the Department — it downloads the real Excel file, not a converted copy.</p>
+
+  <div id="statusBanner" class="banner ok">Connected.</div>
+
+  <div class="card">
+    <div id="stats"></div>
+    <div class="btn-row">
+      <button class="btn" onclick="exportExcel()" id="exportBtn">Export applications.xlsx</button>
+      <button class="btn" style="background:var(--ink-soft);" onclick="loadApplications()">Refresh</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="table-scroll">
+      <div id="tableBox"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentCode = "";
+
+function checkAccess(){
+  const entered = document.getElementById('accessCode').value;
+  fetch(`/api/applications?code=${encodeURIComponent(entered)}`)
+    .then(r=>{
+      if(!r.ok) throw new Error('unauthorized');
+      return r.json();
+    })
+    .then(data=>{
+      currentCode = entered;
+      document.getElementById('gate').style.display = 'none';
+      document.getElementById('mainApp').style.display = 'block';
+      renderTable(data.applications);
+    })
+    .catch(()=>{
+      document.getElementById('gateError').style.display = 'block';
+    });
+}
+
+function loadApplications(){
+  fetch(`/api/applications?code=${encodeURIComponent(currentCode)}`)
+    .then(r=>r.json())
+    .then(data=>renderTable(data.applications))
+    .catch(err=>{
+      document.getElementById('statusBanner').textContent = "Couldn't refresh: " + err.message;
+      document.getElementById('statusBanner').classList.remove('ok');
+    });
+}
+
+function renderTable(applications){
+  const box = document.getElementById('tableBox');
+  const stats = document.getElementById('stats');
+
+  if(!applications || applications.length === 0){
+    box.innerHTML = `<div class="empty-state">No applications yet.</div>`;
+    stats.innerHTML = `<span class="stat">0 total</span>`;
+    return;
+  }
+
+  const byProvince = {};
+  applications.forEach(a=>{ const p = a['Province'] || 'Unknown'; byProvince[p] = (byProvince[p]||0)+1; });
+  stats.innerHTML = `<span class="stat">${applications.length} total</span>` +
+    Object.entries(byProvince).map(([p,c])=>`<span class="stat">${p}: ${c}</span>`).join('');
+
+  const rows = applications.map(a => `
+    <tr>
+      <td class="mono">${a['Reference']||''}</td>
+      <td>${a['Submitted']||''}</td>
+      <td>${a['Parent Name']||''}</td>
+      <td>${a['Parent Phone']||''}</td>
+      <td>${a['Child Name']||''}</td>
+      <td>${a['Grade']||''}</td>
+      <td>${a['School']||''}</td>
+      <td>${a['Province']||''}</td>
+    </tr>`).join('');
+
+  box.innerHTML = `<table>
+    <tr><th>Reference</th><th>Submitted</th><th>Parent</th><th>Phone</th><th>Child</th><th>Grade</th><th>School</th><th>Province</th></tr>
+    ${rows}
+  </table>`;
+}
+
+function exportExcel(){
+  window.location.href = `/api/export?code=${encodeURIComponent(currentCode)}`;
+}
+</script>
+</body>
+</html>

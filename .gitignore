@@ -1,4 +1,11 @@
-node_modules/
 .env
-*.log
-firebase-debug.log
+__pycache__/
+*.pyc
+venv/
+
+# The live applications database — this contains real parents' and
+# children's personal information once you're running for real.
+# It should NOT be committed to a public GitHub repo. Back it up
+# separately (e.g. a private cloud folder) instead.
+applications.xlsx
+National - ordinary schools.xlsx

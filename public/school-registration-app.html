@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vulani — School Place Finder</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap');
+
+  :root{
+    --bg:#F5F7F4;
+    --ink:#142B22;
+    --ink-soft:#3E5148;
+    --green:#0F6B44;
+    --green-dark:#0B4E32;
+    --gold:#D9A441;
+    --sky:#1D4E77;
+    --danger:#B23A34;
+    --card:#FFFFFF;
+    --line:#DDE3DD;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{
+    font-family:'Space Grotesk',system-ui,sans-serif;
+    font-weight:700;
+    letter-spacing:-0.01em;
+    color:var(--ink);
+  }
+  .mono{font-family:'IBM Plex Mono',ui-monospace,monospace;}
+  a{color:var(--sky);}
+
+  /* ---------- Layout shell ---------- */
+  .wrap{max-width:760px;margin:0 auto;padding:0 18px 80px;}
+  header.top{
+    background:var(--green-dark);
+    color:#fff;
+    padding:18px 18px 26px;
+  }
+  header.top .wrap{padding-bottom:0;}
+  .brand-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .brand{display:flex;align-items:center;gap:10px;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.25rem;color:#fff;}
+  .brand .dot{width:10px;height:10px;border-radius:50%;background:var(--gold);display:inline-block;}
+  .lang-toggle{
+    font-size:.78rem;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.35);
+    color:#fff;padding:6px 10px;border-radius:20px;cursor:pointer;
+  }
+  .free-badge{
+    display:inline-block;margin-top:14px;background:var(--gold);color:var(--green-dark);
+    font-weight:600;font-size:.8rem;padding:5px 12px;border-radius:20px;
+  }
+  header.top h1{font-size:1.55rem;margin:12px 0 6px;color:#fff;max-width:520px;}
+  header.top p{color:#DCEADE;font-size:.95rem;max-width:480px;margin:0 0 6px;}
+
+  /* ---------- Steps ---------- */
+  .steps{display:flex;gap:6px;margin:22px 0 18px;padding:0;list-style:none;}
+  .steps li{
+    flex:1;text-align:center;font-size:.72rem;font-weight:600;color:var(--ink-soft);
+    padding-top:10px;border-top:3px solid var(--line);position:relative;
+  }
+  .steps li .num{
+    display:block;font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--ink-soft);margin-bottom:2px;
+  }
+  .steps li.active{color:var(--green);border-top-color:var(--green);}
+  .steps li.done{color:var(--green);border-top-color:var(--gold);}
+
+  /* ---------- Cards / sections ---------- */
+  section{margin-top:26px;}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px;
+  }
+  .section-title{font-size:1.02rem;margin:0 0 4px;}
+  .section-sub{color:var(--ink-soft);font-size:.85rem;margin:0 0 16px;}
+
+  label{display:block;font-size:.82rem;font-weight:600;margin:14px 0 6px;color:var(--ink);}
+  label .req{color:var(--danger);}
+  input,select{
+    width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:9px;
+    font-size:.95rem;font-family:inherit;background:#fff;color:var(--ink);
+  }
+  input:focus,select:focus,button:focus,.school-card:focus-within{
+    outline:3px solid #9FC7B4;outline-offset:1px;border-color:var(--green);
+  }
+  .hint{font-size:.76rem;color:var(--ink-soft);margin-top:4px;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media (max-width:520px){.row2{grid-template-columns:1fr;}}
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    background:var(--green);color:#fff;border:none;border-radius:9px;
+    padding:13px 18px;font-size:.95rem;font-weight:600;cursor:pointer;width:100%;
+    font-family:inherit;
+  }
+  .btn:hover{background:var(--green-dark);}
+  .btn.secondary{background:transparent;color:var(--green);border:1.5px solid var(--green);}
+  .btn.secondary:hover{background:#EAF3EE;}
+  .btn.gold{background:var(--gold);color:var(--green-dark);}
+  .btn.gold:hover{filter:brightness(0.95);}
+  .btn[disabled]{background:var(--line);color:var(--ink-soft);cursor:not-allowed;}
+  .btn-row{display:flex;gap:10px;margin-top:18px;}
+  .btn-row .btn{width:auto;flex:1;}
+
+  /* ---------- School finder ---------- */
+  .filters{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+  @media (max-width:520px){.filters{grid-template-columns:1fr;}}
+  .school-list{display:flex;flex-direction:column;gap:10px;max-height:340px;overflow-y:auto;padding-right:2px;}
+  .school-card{
+    border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;
+    display:flex;justify-content:space-between;gap:10px;align-items:center;background:#fff;
+  }
+  .school-card:hover{border-color:var(--green);}
+  .school-card.selected{border-color:var(--green);background:#EAF3EE;}
+  .school-card .name{font-weight:600;font-size:.92rem;}
+  .school-card .meta{font-size:.76rem;color:var(--ink-soft);margin-top:2px;}
+  .tag{
+    display:inline-block;font-size:.68rem;font-weight:600;padding:2px 8px;border-radius:20px;
+    margin-right:5px;
+  }
+  .tag.primary{background:#DDEFE3;color:var(--green-dark);}
+  .tag.high{background:#FBEAD2;color:#8A5A16;}
+  .tag.area{background:#E4ECF3;color:var(--sky);}
+  .no-results{padding:20px;text-align:center;color:var(--ink-soft);font-size:.9rem;}
+
+  /* ---------- Ticket (signature element) ---------- */
+  .ticket{
+    background:linear-gradient(135deg,var(--green) 0%,var(--green-dark) 100%);
+    color:#fff;border-radius:16px;padding:0;overflow:hidden;position:relative;
+  }
+  .ticket .top-part{padding:22px 20px 18px;}
+  .ticket .eyebrow{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:#BFE0CD;font-weight:600;}
+  .ticket h3{color:#fff;margin:6px 0 2px;font-size:1.3rem;}
+  .ticket .ref{
+    font-family:'IBM Plex Mono',monospace;font-size:1.6rem;letter-spacing:.04em;margin:10px 0 4px;color:var(--gold);
+  }
+  .ticket .rows{margin-top:14px;font-size:.85rem;color:#E7F1EB;}
+  .ticket .rows div{display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid rgba(255,255,255,.15);}
+  .tear{
+    position:relative;height:0;border-top:2px dashed rgba(255,255,255,.4);margin:0 20px;
+  }
+  .tear:before,.tear:after{
+    content:"";position:absolute;top:-10px;width:20px;height:20px;background:var(--bg);border-radius:50%;
+  }
+  .tear:before{left:-30px;}
+  .tear:after{right:-30px;}
+  .ticket .bottom-part{padding:16px 20px 20px;font-size:.78rem;color:#CFE3D8;}
+
+  /* ---------- Queue / submissions table ---------- */
+  table{width:100%;border-collapse:collapse;font-size:.83rem;}
+  th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);}
+  th{color:var(--ink-soft);font-weight:600;font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;}
+  .status-pill{font-size:.7rem;font-weight:600;padding:3px 9px;border-radius:20px;background:#FBEAD2;color:#8A5A16;}
+  .empty-state{
+    text-align:center;padding:36px 16px;color:var(--ink-soft);
+  }
+  .empty-state .big{font-size:2rem;margin-bottom:6px;}
+
+  .banner{
+    background:#EAF3EE;border:1px solid #C7E0D2;border-radius:10px;padding:12px 14px;font-size:.82rem;color:var(--green-dark);margin-bottom:16px;
+  }
+  .banner.warn{background:#FCEFE2;border-color:#F0D3AE;color:#8A5A16;}
+
+  footer{margin-top:40px;font-size:.78rem;color:var(--ink-soft);text-align:center;}
+  .error{color:var(--danger);font-size:.78rem;margin-top:4px;display:none;}
+  .error.show{display:block;}
+  input.invalid{border-color:var(--danger);}
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand-row">
+      <div class="brand"><span class="dot"></span>Vulani</div>
+      <select class="lang-toggle" id="langSelect" onchange="setLanguage(this.value)" title="Choose your language">
+        <option value="en">English</option>
+        <option value="af">Afrikaans</option>
+        <option value="zu">isiZulu</option>
+        <option value="xh">isiXhosa</option>
+        <option value="st">Sesotho</option>
+        <option value="nso">Sepedi</option>
+        <option value="tn">Setswana</option>
+        <option value="ss">siSwati</option>
+        <option value="ve">Tshivenda</option>
+        <option value="ts">Xitsonga</option>
+        <option value="nr">isiNdebele</option>
+        <option value="sasl" disabled>SASL (video needed — see notes)</option>
+      </select>
+    </div>
+    <span class="free-badge" data-i18n="freeBadge">Free for parents · no airtime, no data charged</span>
+    <h1 data-i18n="heroHeadline">Reserve your child's place at a public school — from your phone.</h1>
+    <p data-i18n="heroSub">Search schools near you, complete one form for your child, and we submit it straight to the Department of Education. No queues, no printing, no fee.</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="banner" id="backendBanner">Checking connection…</div>
+
+  <ol class="steps" id="stepTracker">
+    <li class="active" data-step="1"><span class="num">01</span><span data-i18n="stepParent">Parent</span></li>
+    <li data-step="2"><span class="num">02</span><span data-i18n="stepChild">Child</span></li>
+    <li data-step="3"><span class="num">03</span><span data-i18n="stepSchool">School</span></li>
+    <li data-step="4"><span class="num">04</span><span data-i18n="stepReview">Review</span></li>
+    <li data-step="5"><span class="num">05</span><span data-i18n="stepDone">Done</span></li>
+  </ol>
+
+  <!-- STEP 1: Parent details -->
+  <section id="step-1">
+    <div class="card">
+      <h2 class="section-title" data-i18n="parentSectionTitle">Parent / guardian details</h2>
+      <p class="section-sub">This stays with your application only — it is not shared or sold to anyone.</p>
+
+      <label for="pName">Full name <span class="req">*</span></label>
+      <input id="pName" type="text" autocomplete="name" placeholder="e.g. Nomvula Dlamini">
+      <div class="error" id="err-pName">Please enter your full name.</div>
+
+      <label for="pID">South African ID number <span class="req">*</span></label>
+      <input id="pID" type="text" inputmode="numeric" maxlength="13" placeholder="13 digits">
+      <div class="hint">Used only to confirm your identity with the Department. Never shown publicly.</div>
+      <div class="error" id="err-pID">Enter a valid 13-digit ID number.</div>
+
+      <div class="row2">
+        <div>
+          <label for="pPhone">Cellphone number <span class="req">*</span></label>
+          <input id="pPhone" type="tel" inputmode="tel" placeholder="e.g. 082 123 4567">
+          <div class="error" id="err-pPhone">Enter a valid SA cell number.</div>
+        </div>
+        <div>
+          <label for="pRelation">Relationship to child</label>
+          <select id="pRelation">
+            <option>Mother</option><option>Father</option><option>Legal guardian</option><option>Grandparent</option><option>Other</option>
+          </select>
+        </div>
+      </div>
+
+      <label for="pAddress">Home address <span class="req">*</span></label>
+      <input id="pAddress" type="text" placeholder="Street / house no., area, town">
+      <div class="error" id="err-pAddress">Please enter your address.</div>
+
+      <label for="pEmail">Email address (optional)</label>
+      <input id="pEmail" type="email" placeholder="e.g. name@example.com">
+      <div class="hint">If you give an email, we'll send your confirmation and reference number there too — not required if you don't have one.</div>
+
+      <div class="btn-row">
+        <button class="btn" onclick="goToStep(2)" data-i18n="continueBtn">Continue</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2: Child details -->
+  <section id="step-2" style="display:none;">
+    <div class="card">
+      <h2 class="section-title" data-i18n="childSectionTitle">Child's details</h2>
+      <p class="section-sub">Add one child per application. You can start another application afterwards for a second child.</p>
+
+      <label for="cName">Child's full name <span class="req">*</span></label>
+      <input id="cName" type="text" placeholder="e.g. Thabo Dlamini">
+      <div class="error" id="err-cName">Please enter your child's name.</div>
+
+      <div class="row2">
+        <div>
+          <label for="cDOB">Date of birth <span class="req">*</span></label>
+          <input id="cDOB" type="date">
+          <div class="error" id="err-cDOB">Please enter a date of birth.</div>
+        </div>
+        <div>
+          <label for="cGrade">Grade applying for <span class="req">*</span></label>
+          <select id="cGrade">
+            <option value="">Select grade</option>
+            <option>Grade R</option><option>Grade 1</option><option>Grade 2</option><option>Grade 3</option>
+            <option>Grade 4</option><option>Grade 5</option><option>Grade 6</option><option>Grade 7</option>
+            <option>Grade 8</option><option>Grade 9</option><option>Grade 10</option><option>Grade 11</option><option>Grade 12</option>
+          </select>
+          <div class="error" id="err-cGrade">Please select a grade.</div>
+        </div>
+      </div>
+
+      <label for="cBirthCert">Birth certificate / ID number</label>
+      <input id="cBirthCert" type="text" placeholder="If available">
+      <div class="hint">Not sure? Leave blank — you can bring the original document when the school confirms placement.</div>
+
+      <div class="btn-row">
+        <button class="btn secondary" onclick="goToStep(1)" data-i18n="back">Back</button>
+        <button class="btn" onclick="goToStep(3)" data-i18n="continueBtn">Continue</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 3: School finder -->
+  <section id="step-3" style="display:none;">
+    <div class="card">
+      <h2 class="section-title" data-i18n="findSchoolTitle">Find a school</h2>
+      <p class="section-sub">Filter by province and area. This list is a small starting sample — swap in the full department list before launch (see notes at the end of this file).</p>
+
+      <div class="filters">
+        <select id="fProvince" onchange="renderSchools()">
+          <option value="">All provinces</option>
+        </select>
+        <select id="fArea" onchange="renderSchools()">
+          <option value="">All area types</option>
+          <option value="Township">Township</option>
+          <option value="Rural">Rural</option>
+          <option value="Suburb">Suburb</option>
+        </select>
+      </div>
+      <input id="fSearch" type="text" placeholder="Search school name or town..." oninput="renderSchools()" style="margin-bottom:12px;">
+
+      <div id="schoolList" class="school-list"></div>
+      <div class="error" id="err-school" style="margin-top:10px;">Please select a school before continuing.</div>
+
+      <div class="btn-row">
+        <button class="btn secondary" onclick="goToStep(2)" data-i18n="back">Back</button>
+        <button class="btn" onclick="validateAndReview()">Review application</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 4: Review -->
+  <section id="step-4" style="display:none;">
+    <div class="card">
+      <h2 class="section-title" data-i18n="reviewTitle">Review before you submit</h2>
+      <p class="section-sub">Check the details below. Once submitted, this goes into the batch we send to the Department.</p>
+      <div id="reviewBox"></div>
+      <div class="banner" style="margin-top:16px;">
+        By submitting, you confirm the information above is correct and you consent to it being shared with the Department of Education for the purpose of school placement, in line with POPIA.
+      </div>
+      <div class="btn-row">
+        <button class="btn secondary" onclick="goToStep(3)" data-i18n="back">Back</button>
+        <button class="btn gold" onclick="submitApplication()" data-i18n="submitBtn">Submit application</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 5: Confirmation ticket -->
+  <section id="step-5" style="display:none;">
+    <div class="ticket">
+      <div class="top-part">
+        <div class="eyebrow">Application received</div>
+        <h3 id="ticketChildName">—</h3>
+        <div class="ref mono" id="ticketRef">—</div>
+        <div class="rows">
+          <div><span>School</span><span id="ticketSchool">—</span></div>
+          <div><span>Grade</span><span id="ticketGrade">—</span></div>
+          <div><span>Submitted</span><span id="ticketDate">—</span></div>
+        </div>
+      </div>
+      <div class="tear"></div>
+      <div class="bottom-part">Keep this reference number. The school will contact the cellphone number on file once a place is confirmed. No payment is ever required at any step.</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn secondary" onclick="resetForm()" data-i18n="registerAnother">Register another child</button>
+    </div>
+  </section>
+
+  <footer>
+    Vulani (Pty) LTD· built for the Department of Education<br>
+    All rights reserved 2026.
+  </footer>
+</div>
+
+<script>
+/* ============================================================
+   BUILD NOTES — v2: backend + real school data
+   ============================================================
+   DAY 1 — done. Click-through prototype, in-memory only.
+
+   DAY 2 — real school data (this version loads it properly).
+     - The app now tries to fetch "schools.json" from the same
+       folder at startup. If that file is missing (or you just
+       opened this HTML file directly by double-clicking it,
+       which browsers treat as a locked-down "file://" page),
+       it quietly falls back to the small sample list below so
+       the app still works while you're testing.
+     - To use REAL schools: get the official Department of Basic
+       Education EMIS Schools Masterlist —
+         Downloads (by province): education.gov.za/Programmes/EMIS/EMISDownloads.aspx
+         Searchable version:      lurits2.doe.gov.za/HomeLinks/Masterlist
+       Then run the included convert_masterlist_to_json.py script
+       against the Excel file(s) you download, which produces a
+       schools.json file with every school's name, province,
+       town and phase in the exact shape this app expects.
+     - IMPORTANT: to let the browser fetch schools.json, you
+       need to serve the folder over a local web address instead
+       of opening the HTML file directly. The simplest way, with
+       Python already on most PCs:
+         1. Put school-registration-app.html and schools.json in
+            the same folder.
+         2. Open Command Prompt in that folder and run:
+              python -m http.server 8000
+         3. Visit http://localhost:8000/school-registration-app.html
+       (VS Code's free "Live Server" extension does the same
+       thing with one click, if you prefer.)
+
+   DAY 3 — backend, so submissions actually persist (this version).
+     - This app now runs on a small Python server (app.py, Flask)
+       that saves every application straight into a real Excel
+       file (applications.xlsx) — that IS the database, no Firebase
+       and no separate conversion step involved.
+     - Run it with: python app.py — then open this page at
+       http://localhost:5000/school-registration-app.html
+       (not the old localhost:8000 python -m http.server — that
+       was only ever a stand-in before the backend existed).
+     - IMPORTANT — this page can only ever WRITE a new application
+       (via POST /api/register), never read the list back. A
+       parent using this app must never be able to see or export
+       anyone else's child's details. The full list, and the
+       Excel export for your Department upload, live only in
+       admin.html — a separate page meant for your team.
+     - admin.html's access code is checked on the SERVER now (in
+       app.py / your .env file) rather than sitting in the page's
+       own code — a real improvement over the earlier version.
+       Still just a shared password though, not individual staff
+       logins; fine for a small pilot team, not for a large one.
+     - See app.py's own comments for the full explanation of the
+       trade-offs of using Excel as the database, and when it's
+       time to move past it.
+
+   DAY 4 — compliance and safety.
+     - This handles children's and parents' personal information,
+       so POPIA (Protection of Personal Information Act) applies
+       directly. Before any real launch you need: a written
+       privacy notice, a lawful basis for processing a minor's
+       data (parental consent, which this form starts to capture),
+       and a data retention/deletion plan.
+     - applications.xlsx contains real personal information once
+       you're live — it's excluded from git (see .gitignore) and
+       should be backed up somewhere private, not a public repo.
+     - Also confirm, in writing, that the Department of Basic
+       Education is willing to receive applications this way —
+       this app is only useful if there's a real intake process
+       on the other end.
+
+   DAY 5 — the business side.
+     - Telecoms: the deal to pursue is zero-rating — the app uses
+       no data at all for parents, on MTN/Vodacom/other networks.
+       That's the priority conversation, usually with a telecom's
+       corporate/CSR or enterprise partnerships team rather than
+       general support. Advertising revenue share is the second,
+       separate conversation once zero-rating is in place.
+     - Advertising: decide who the first 2-3 advertisers are
+       before building an ad system — designing for a guess is
+       wasted work.
+
+   None of the above needs to block trying this file today.
+   ============================================================ */
+
+let backendReady = false;
+
+fetch('/api/ping').then(r=>r.ok ? r.json() : Promise.reject())
+  .then(()=>{ backendReady = true; setBackendBanner(); })
+  .catch(()=>{ backendReady = false; setBackendBanner(); });
+
+function setBackendBanner(){
+  const el = document.getElementById('backendBanner');
+  if(backendReady){
+    el.textContent = "Connected — applications save straight into applications.xlsx on the server.";
+    el.classList.remove('warn');
+  } else {
+    el.textContent = "Can't reach the server. Make sure you started it with 'python app.py' and are viewing this page at http://localhost:5000/... (not port 8000).";
+    el.classList.add('warn');
+  }
+}
+setBackendBanner();
+
+// ---- Small fallback list, used only until schools.json loads ----
+let SCHOOLS = [
+  {name:"Khayelitsha Primary School", province:"Western Cape", area:"Township", town:"Khayelitsha, Cape Town", phase:"Primary"},
+  {name:"Sinenjongo High School", province:"Western Cape", area:"Township", town:"Joe Slovo Park, Milnerton", phase:"High"},
+  {name:"Rondebosch Boys' Primary", province:"Western Cape", area:"Suburb", town:"Rondebosch, Cape Town", phase:"Primary"},
+  {name:"Soweto Central Primary School", province:"Gauteng", area:"Township", town:"Soweto, Johannesburg", phase:"Primary"},
+  {name:"Sizwe Secondary School", province:"Gauteng", area:"Township", town:"Tembisa, Ekurhuleni", phase:"High"},
+  {name:"Parktown Girls' High School", province:"Gauteng", area:"Suburb", town:"Parktown, Johannesburg", phase:"High"},
+  {name:"Nkandla Rural Primary School", province:"KwaZulu-Natal", area:"Rural", town:"Nkandla", phase:"Primary"},
+  {name:"Umlazi Comprehensive High", province:"KwaZulu-Natal", area:"Township", town:"Umlazi, Durban", phase:"High"},
+  {name:"Mthatha Rural Combined School", province:"Eastern Cape", area:"Rural", town:"Mthatha", phase:"Primary"},
+  {name:"Zwide Secondary School", province:"Eastern Cape", area:"Township", town:"Zwide, Gqeberha", phase:"High"},
+  {name:"Mangaung Primary School", province:"Free State", area:"Township", town:"Mangaung, Bloemfontein", phase:"Primary"},
+  {name:"Polokwane Rural Primary School", province:"Limpopo", area:"Rural", town:"Polokwane district", phase:"Primary"},
+];
+
+let selectedSchool = null;
+
+function initProvinceFilter(){
+  const sel = document.getElementById('fProvince');
+  sel.querySelectorAll('option:not(:first-child)').forEach(o=>o.remove());
+  const provinces = [...new Set(SCHOOLS.map(s=>s.province))].sort();
+  provinces.forEach(p=>{
+    const o = document.createElement('option');
+    o.value = p; o.textContent = p;
+    sel.appendChild(o);
+  });
+}
+initProvinceFilter();
+
+// Try to load the real, full schools list. Falls back silently
+// to the sample list above if schools.json isn't found (e.g. when
+// opening this file directly instead of via a local server).
+fetch('schools.json', { cache: 'no-store' })
+  .then(r => { if(!r.ok) throw new Error('schools.json not found'); return r.json(); })
+  .then(data => {
+    if(Array.isArray(data) && data.length){
+      SCHOOLS = data;
+      initProvinceFilter();
+      renderSchools();
+      console.info(`Loaded ${SCHOOLS.length} schools from schools.json`);
+    }
+  })
+  .catch(err => {
+    console.info('Using built-in sample school list —', err.message);
+  });
+
+// Note: this parent-facing page deliberately does NOT read the
+// applications collection back out of the database. Parents should
+// only ever be able to write their own application, never see
+// anyone else's — that list and its CSV export now live in the
+// separate admin.html file, for your team's use only.
+
+function goToStep(n){
+  for(let i=1;i<=5;i++){
+    document.getElementById('step-'+i).style.display = (i===n)?'block':'none';
+  }
+  document.querySelectorAll('#stepTracker li').forEach(li=>{
+    const s = parseInt(li.dataset.step);
+    li.classList.toggle('active', s===n);
+    li.classList.toggle('done', s<n);
+  });
+  if(n===3) renderSchools();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function renderSchools(){
+  const province = document.getElementById('fProvince').value;
+  const area = document.getElementById('fArea').value;
+  const q = document.getElementById('fSearch').value.trim().toLowerCase();
+  const list = SCHOOLS.filter(s=>
+    (!province || s.province===province) &&
+    (!area || s.area===area) &&
+    (!q || s.name.toLowerCase().includes(q) || s.town.toLowerCase().includes(q))
+  );
+  const box = document.getElementById('schoolList');
+  box.innerHTML = '';
+  if(list.length===0){
+    box.innerHTML = '<div class="no-results">No schools match yet — try a different province or area, or widen your search.</div>';
+    return;
+  }
+  list.forEach(s=>{
+    const div = document.createElement('div');
+    div.className = 'school-card' + (selectedSchool && selectedSchool.name===s.name ? ' selected':'');
+    div.tabIndex = 0;
+    div.innerHTML = `
+      <div>
+        <div class="name">${s.name}</div>
+        <div class="meta">
+          <span class="tag ${s.phase==='High'?'high':'primary'}">${s.phase}</span>
+          <span class="tag area">${s.area}</span>
+          ${s.town}, ${s.province}
+        </div>
+      </div>`;
+    div.onclick = ()=>{
+      selectedSchool = s;
+      document.getElementById('err-school').classList.remove('show');
+      renderSchools();
+    };
+    box.appendChild(div);
+  });
+}
+
+function showError(id, show){
+  document.getElementById(id).classList.toggle('show', show);
+  const fieldId = id.replace('err-','');
+  const field = document.getElementById(fieldId);
+  if(field) field.classList.toggle('invalid', show);
+}
+
+function validateStep1(){
+  let ok = true;
+  const name = document.getElementById('pName').value.trim();
+  const id13 = document.getElementById('pID').value.trim();
+  const phone = document.getElementById('pPhone').value.trim();
+  const addr = document.getElementById('pAddress').value.trim();
+  showError('err-pName', name.length<2); if(name.length<2) ok=false;
+  showError('err-pID', !/^\d{13}$/.test(id13)); if(!/^\d{13}$/.test(id13)) ok=false;
+  showError('err-pPhone', !/^0\d{9}$/.test(phone.replace(/\s/g,''))); if(!/^0\d{9}$/.test(phone.replace(/\s/g,''))) ok=false;
+  showError('err-pAddress', addr.length<5); if(addr.length<5) ok=false;
+  return ok;
+}
+function validateStep2(){
+  let ok = true;
+  const name = document.getElementById('cName').value.trim();
+  const dob = document.getElementById('cDOB').value;
+  const grade = document.getElementById('cGrade').value;
+  showError('err-cName', name.length<2); if(name.length<2) ok=false;
+  showError('err-cDOB', !dob); if(!dob) ok=false;
+  showError('err-cGrade', !grade); if(!grade) ok=false;
+  return ok;
+}
+
+// wrap goToStep for validation on forward navigation
+const _goToStep = goToStep;
+goToStep = function(n){
+  if(n===2 && !validateStep1()) return;
+  if(n===3 && !validateStep2()) return;
+  _goToStep(n);
+}
+
+function validateAndReview(){
+  if(!selectedSchool){
+    document.getElementById('err-school').classList.add('show');
+    return;
+  }
+  buildReview();
+  _goToStep(4);
+}
+
+function buildReview(){
+  const data = collectData();
+  document.getElementById('reviewBox').innerHTML = `
+    <table>
+      <tr><th>Parent</th><td>${data.pName} · ${data.pPhone}${data.pEmail ? ' · ' + data.pEmail : ''}</td></tr>
+      <tr><th>Address</th><td>${data.pAddress}</td></tr>
+      <tr><th>Child</th><td>${data.cName} · DOB ${data.cDOB}</td></tr>
+      <tr><th>Grade</th><td>${data.cGrade}</td></tr>
+      <tr><th>School</th><td>${data.school.name}, ${data.school.town}</td></tr>
+    </table>`;
+}
+
+function collectData(){
+  return {
+    pName: document.getElementById('pName').value.trim(),
+    pID: document.getElementById('pID').value.trim(),
+    pPhone: document.getElementById('pPhone').value.trim(),
+    pRelation: document.getElementById('pRelation').value,
+    pAddress: document.getElementById('pAddress').value.trim(),
+    pEmail: document.getElementById('pEmail').value.trim(),
+    cName: document.getElementById('cName').value.trim(),
+    cDOB: document.getElementById('cDOB').value,
+    cGrade: document.getElementById('cGrade').value,
+    cBirthCert: document.getElementById('cBirthCert').value.trim(),
+    school: selectedSchool
+  };
+}
+
+function submitApplication(){
+  const data = collectData();
+  const submitBtn = document.querySelector('#step-4 .btn.gold');
+  submitBtn.disabled = true;
+
+  fetch('/api/register', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  })
+    .then(r => r.json())
+    .then(resp => {
+      submitBtn.disabled = false;
+      if(!resp.ok){
+        alert(resp.error || "We couldn't save your application. Please check the details and try again.");
+        return;
+      }
+      document.getElementById('ticketChildName').textContent = data.cName;
+      document.getElementById('ticketRef').textContent = resp.ref;
+      document.getElementById('ticketSchool').textContent = data.school.name;
+      document.getElementById('ticketGrade').textContent = data.cGrade;
+      document.getElementById('ticketDate').textContent = resp.submitted;
+      _goToStep(5);
+    })
+    .catch(err => {
+      submitBtn.disabled = false;
+      console.error('Save failed — could not reach the server:', err);
+      alert("We couldn't reach the server. Make sure app.py is running, then try again.");
+    });
+}
+
+function resetForm(){
+  ['pName','pID','pPhone','pAddress','cName','cDOB','cGrade','cBirthCert'].forEach(id=>{
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('pRelation').selectedIndex = 0;
+  selectedSchool = null;
+  _goToStep(1);
+}
+
+// ============================================================
+// TRANSLATIONS
+// ------------------------------------------------------------
+// IMPORTANT: these are a first machine-assisted draft, not
+// professional translations. English and Afrikaans are the most
+// reliable of the set. isiZulu, isiXhosa, Sesotho and Setswana
+// are reasonable but should still be checked. Sepedi, siSwati,
+// Tshivenda and Xitsonga are the least certain — please have a
+// home-language speaker review every string in this file before
+// real parents rely on it for something as important as school
+// registration. A wrong word here isn't just a typo; it could
+// cost someone a deadline.
+//
+// South African Sign Language (SASL), the 12th official language,
+// is intentionally NOT included below. SASL is its own visual
+// language with its own grammar, not a signed version of English
+// word-for-word — representing it properly needs short interpreter
+// videos at each step, not translated text. That's a real feature
+// to plan for, not something to fake with subtitles.
+//
+// To add more translated strings later: wrap the English text in
+// <span data-i18n="yourKey">...</span> or add data-i18n="yourKey"
+// to the element, then add "yourKey" to every language object below.
+// ============================================================
+const translations = {
+  en: {
+    freeBadge: "Free for parents · no airtime, no data charged",
+    heroHeadline: "Reserve your child's place at a public school — from your phone.",
+    heroSub: "Search schools near you, complete one form for your child, and we submit it straight to the Department of Education. No queues, no printing, no fee.",
+    stepParent: "Parent", stepChild: "Child", stepSchool: "School", stepReview: "Review", stepDone: "Done",
+    parentSectionTitle: "Parent / guardian details",
+    childSectionTitle: "Child's details",
+    findSchoolTitle: "Find a school",
+    reviewTitle: "Review before you submit",
+    applicationsTitle: "Applications",
+    back: "Back", continueBtn: "Continue",
+    submitBtn: "Submit application",
+    exportBtn: "Export batch as CSV",
+    registerAnother: "Register another child",
+  },
+  af: {
+    freeBadge: "Gratis vir ouers · geen lugtyd, geen data gehef nie",
+    heroHeadline: "Bespreek jou kind se plek by 'n openbare skool — vanaf jou foon.",
+    heroSub: "Soek skole naby jou, voltooi een vorm vir jou kind, en ons dien dit direk in by die Departement van Onderwys. Geen toue, geen drukwerk, geen fooi nie.",
+    stepParent: "Ouer", stepChild: "Kind", stepSchool: "Skool", stepReview: "Hersien", stepDone: "Klaar",
+    parentSectionTitle: "Ouer- / voogbesonderhede",
+    childSectionTitle: "Kind se besonderhede",
+    findSchoolTitle: "Vind 'n skool",
+    reviewTitle: "Hersien voor jy indien",
+    applicationsTitle: "Aansoeke",
+    back: "Terug", continueBtn: "Gaan voort",
+    submitBtn: "Dien aansoek in",
+    exportBtn: "Voer bondel uit as CSV",
+    registerAnother: "Registreer nog 'n kind",
+  },
+  zu: {
+    freeBadge: "Kumahhala kubazali · akukho idatha ekhokhwayo",
+    heroHeadline: "Gcina indawo yengane yakho esikoleni sikahulumeni — usebenzisa ifoni yakho.",
+    heroSub: "Sesha izikole eziseduze nawe, ugcwalise ifomu elilodwa lengane yakho, sisithumele ngokushesha eMnyangweni Wezemfundo. Akukho ukulinda, akukho ukuphrinta, akukho imali.",
+    stepParent: "Umzali", stepChild: "Ingane", stepSchool: "Isikole", stepReview: "Buyekeza", stepDone: "Kwenziwe",
+    parentSectionTitle: "Imininingwane yomzali/umgcini",
+    childSectionTitle: "Imininingwane yengane",
+    findSchoolTitle: "Thola isikole",
+    reviewTitle: "Buyekeza ngaphambi kokuthumela",
+    applicationsTitle: "Izicelo",
+    back: "Emuva", continueBtn: "Qhubeka",
+    submitBtn: "Thumela isicelo",
+    exportBtn: "Thumela njenge-CSV",
+    registerAnother: "Bhalisa enye ingane",
+  },
+  xh: {
+    freeBadge: "Simahla kubazali · akukho datha ehlawulwayo",
+    heroHeadline: "Gcina indawo yomntwana wakho kwisikolo sikarhulumente — usebenzisa ifowuni yakho.",
+    heroSub: "Khangela izikolo ezikufuphi, ugcwalise ifom enye yomntwana wakho, size sithumele kwiSebe leMfundo. Akukho ukulinda, akukho ukuprinta, akukho imali.",
+    stepParent: "Umzali", stepChild: "Umntwana", stepSchool: "Isikolo", stepReview: "Phonononga", stepDone: "Kugqityiwe",
+    parentSectionTitle: "Iinkcukacha zomzali/umgcini",
+    childSectionTitle: "Iinkcukacha zomntwana",
+    findSchoolTitle: "Fumana isikolo",
+    reviewTitle: "Phonononga ngaphambi kokungenisa",
+    applicationsTitle: "Izicelo",
+    back: "Emva", continueBtn: "Qhubeka",
+    submitBtn: "Ngenisa isicelo",
+    exportBtn: "Khupha njenge-CSV",
+    registerAnother: "Bhalisa omnye umntwana",
+  },
+  st: {
+    freeBadge: "Ke mahala ho batswadi · ha ho data e lefshwang",
+    heroHeadline: "Boloka sebaka sa ngwana wa hao sekolong sa mmuso — o sebedisa founu ya hao.",
+    heroSub: "Batla dikolo tse haufi le wena, tlatsa foromo e le nngwe ya ngwana wa hao, mme re e romelle Lefapheng la Thuto ka hara nako. Ha ho ho ema mothalong, ha ho ho hatisa, ha ho tefo.",
+    stepParent: "Motswadi", stepChild: "Ngwana", stepSchool: "Sekolo", stepReview: "Hlahloba", stepDone: "E phethilwe",
+    parentSectionTitle: "Dintlha tsa motswadi/mohlokomedi",
+    childSectionTitle: "Dintlha tsa ngwana",
+    findSchoolTitle: "Fumana sekolo",
+    reviewTitle: "Hlahloba pele o romela",
+    applicationsTitle: "Dikopo",
+    back: "Morao", continueBtn: "Tswela pele",
+    submitBtn: "Romela kopo",
+    exportBtn: "Ntsha sekhechana e le CSV",
+    registerAnother: "Ngodisa ngwana e mong",
+  },
+  nso: {
+    freeBadge: "Ke mahala go batswadi · ga go data yeo e lefelwago",
+    heroHeadline: "Boloka lefelo la ngwana wa gago sekolong sa mmušo — o šomiša founu ya gago.",
+    heroSub: "Nyakišiša dikolo tše kgauswi le wena, tlatša foromo e tee ya ngwana wa gago, gomme re e romele Kgorong ya Thuto kapejana. Ga go go ema mothalong, ga go go gatiša, ga go tefelo.",
+    stepParent: "Motswadi", stepChild: "Ngwana", stepSchool: "Sekolo", stepReview: "Lekola", stepDone: "E fedile",
+    parentSectionTitle: "Dintlha tša motswadi/mohlokomedi",
+    childSectionTitle: "Dintlha tša ngwana",
+    findSchoolTitle: "Hwetša sekolo",
+    reviewTitle: "Lekola pele ga go romela",
+    applicationsTitle: "Dikgopelo",
+    back: "Morago", continueBtn: "Tšwela pele",
+    submitBtn: "Romela kgopelo",
+    exportBtn: "Ntšha sekgoba bjalo ka CSV",
+    registerAnother: "Ngwadiša ngwana yo mongwe",
+  },
+  tn: {
+    freeBadge: "Ke mahala mo batsading · ga go na data e e duelwang",
+    heroHeadline: "Boloka lefelo la ngwana wa gago kwa sekolong sa puso — o dirisa founu ya gago.",
+    heroSub: "Batla dikolo tse di gaufi le wena, tlatsa foromo e le nngwe ya ngwana wa gago, mme re e romelela Lefapheng la Thuto ka bonako. Ga go na go ema mo moleng, ga go na go gatisa, ga go na tuelo.",
+    stepParent: "Motsadi", stepChild: "Ngwana", stepSchool: "Sekolo", stepReview: "Sekaseka", stepDone: "Go dirilwe",
+    parentSectionTitle: "Dintlha tsa motsadi/motlhokomedi",
+    childSectionTitle: "Dintlha tsa ngwana",
+    findSchoolTitle: "Batla sekolo",
+    reviewTitle: "Sekaseka pele ga go romela",
+    applicationsTitle: "Dikopo",
+    back: "Morago", continueBtn: "Tswelela",
+    submitBtn: "Romela kopo",
+    exportBtn: "Ntsha karolo jaaka CSV",
+    registerAnother: "Kwadisa ngwana yo mongwe",
+  },
+  ss: {
+    freeBadge: "Kumahhala kubatali · akukho idatha lekhokhwako",
+    heroHeadline: "Gcina indzawo yengane yakho esikolweni sembuso — usebentisa liselula lakho.",
+    heroSub: "Sesha tikolo leticedvutane nawe, ugcwalise fomu linye lengane yakho, besesisitfumela eMnyangweni Wetemfundvo. Akukho kulindza, akukho kuphrinta, akukho imali.",
+    stepParent: "Umtali", stepChild: "Ingane", stepSchool: "Sikolo", stepReview: "Buyeketa", stepDone: "Kwentiwe",
+    parentSectionTitle: "Imininingwane yemtali/umgcini",
+    childSectionTitle: "Imininingwane yengane",
+    findSchoolTitle: "Tfola sikolo",
+    reviewTitle: "Buyeketa ngembi kwekutfumela",
+    applicationsTitle: "Ticelo",
+    back: "Emuva", continueBtn: "Chubeka",
+    submitBtn: "Tfumela sicelo",
+    exportBtn: "Khipha njenge-CSV",
+    registerAnother: "Bhalisa lenye ingane",
+  },
+  ve: {
+    freeBadge: "Ndi mahala kha vhabebi · a hu na data i badelwaho",
+    heroHeadline: "Vhulunga fhethu ha ṅwana wau tshikoloni tsha muvhuso — u tshi shumisa founu yau.",
+    heroSub: "Ṱoḓa zwikolo zwi re tsini na inwi, u ḓadze fomo nthihi ya ṅwana wau, ri i rumele Muhashoni wa Pfunzo nga u ṱavhanya. A hu na u ima mudini, a hu na u gwadamedza, a hu na mbadelo.",
+    stepParent: "Mubebi", stepChild: "Ṅwana", stepSchool: "Tshikolo", stepReview: "Sedza hafhu", stepDone: "Zwo fheliswa",
+    parentSectionTitle: "Mafhungo a mubebi/mulisa",
+    childSectionTitle: "Mafhungo a ṅwana",
+    findSchoolTitle: "Wana tshikolo",
+    reviewTitle: "Sedza hafhu nga phanḓa ha u rumela",
+    applicationsTitle: "Dzikhumbelo",
+    back: "Murahu", continueBtn: "Bvela phanḓa",
+    submitBtn: "Rumela khumbelo",
+    exportBtn: "Bvisa sa CSV",
+    registerAnother: "Ṅwalisa muṅwe ṅwana",
+  },
+  ts: {
+    freeBadge: "I mahala eka vatswari · a ku na data leyi hakeriwaka",
+    heroHeadline: "Hlayisa ndhawu ya n'wana wa wena exikolweni xa mfumo — u tirhisa riqingho ra wena.",
+    heroSub: "Lava swikolo leswi tshinelaka na wena, u tata fomo yin'we ya n'wana wa wena, hi yi rhumela eNdzawulweni ya Dyondzo hi ku hatlisa. A ku na ku yima enkarhini, a ku na ku printa, a ku na hakelo.",
+    stepParent: "Mutswari", stepChild: "N'wana", stepSchool: "Xikolo", stepReview: "Kambisisa", stepDone: "Swi hetiwile",
+    parentSectionTitle: "Vuxokoxoko bya mutswari/mulanguteri",
+    childSectionTitle: "Vuxokoxoko bya n'wana",
+    findSchoolTitle: "Kuma xikolo",
+    reviewTitle: "Kambisisa emahlweni ko rhumela",
+    applicationsTitle: "Swikombelo",
+    back: "Emuva", continueBtn: "Ya emahlweni",
+    submitBtn: "Rhumela xikombelo",
+    exportBtn: "Humesa tanihi CSV",
+    registerAnother: "Tsarisa n'wana un'wana",
+  },
+  nr: {
+    freeBadge: "Kumahhala kubazali · akunayo idatha ekhokhwako",
+    heroHeadline: "Gcina indawo yomntwana wakho esikolweni sombuso — usebenzisa ifoni yakho.",
+    heroSub: "Funa izikolo eziseduze nawe, gcwalisa ifomu elilodwa lomntwana wakho, besesiyithumela eMnyangweni wezeMfundo msinyana. Akunakulinda, akunakuphrinta, akunayo imali.",
+    stepParent: "Umzali", stepChild: "Umntwana", stepSchool: "Isikolo", stepReview: "Buyekeza", stepDone: "Kwenziwe",
+    parentSectionTitle: "Imininingwane yomzali/umgadi",
+    childSectionTitle: "Imininingwane yomntwana",
+    findSchoolTitle: "Thola isikolo",
+    reviewTitle: "Buyekeza ngaphambi kokuthumela",
+    applicationsTitle: "Iincelo",
+    back: "Emuva", continueBtn: "Qhubeka",
+    submitBtn: "Thumela isicelo",
+    exportBtn: "Khipha njenge-CSV",
+    registerAnother: "Bhalisa omunye umntwana",
+  },
+};
+
+function setLanguage(lang){
+  const dict = translations[lang] || translations.en;
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const key = el.getAttribute('data-i18n');
+    if(dict[key]) el.textContent = dict[key];
+  });
+  document.documentElement.lang = lang;
+}
+setLanguage('en');
+</script>
+</body>
+</html>
